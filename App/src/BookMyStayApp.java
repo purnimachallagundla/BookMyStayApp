@@ -131,6 +131,7 @@ class BookingHistory {
 
         System.out.println("\n--- Report ---");
         System.out.println("Total Bookings: " + history.size());
-        System.out.println("Total Revenue: " + totalRevenue);
+        System.out.println("hello");
+        System.out.println("Total Reporting: " + totalRevenue);
     }
 }
