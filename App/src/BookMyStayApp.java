@@ -19,6 +19,27 @@ class Room {
     }
 }
 
+// Reservation Entity
+class Reservation {
+    private static int counter = 1;
+
+    private int reservationId;
+    private String roomType;
+
+    public Reservation(String roomType) {
+        this.reservationId = counter++; // unique ID
+        this.roomType = roomType;
+    }
+
+    public int getReservationId() {
+        return reservationId;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+}
+
 // Inventory (Centralized State)
 class RoomInventory {
     private HashMap<String, Integer> inventory;
@@ -35,37 +56,41 @@ class RoomInventory {
         return inventory.getOrDefault(type, 0);
     }
 
-    // UPDATE after booking
     public void reduceAvailability(String type) {
         int current = getAvailability(type);
         if (current > 0) {
             inventory.put(type, current - 1);
         }
     }
-
-    public void displayInventory() {
-        System.out.println("\n--- Current Inventory ---");
-        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
-        }
-    }
 }
 
-// Booking Service (First-Come-First-Served)
-class BookingService {
+// Allocation + Confirmation Service
+class ReservationService {
 
-    public void bookRoom(RoomInventory inventory, String roomType) {
+    public Reservation confirmBooking(RoomInventory inventory, String roomType) {
 
-        System.out.println("\nRequest received for: " + roomType);
+        System.out.println("\nProcessing booking for: " + roomType);
 
         int available = inventory.getAvailability(roomType);
 
-        // FCFS Logic
         if (available > 0) {
+
+            // Step 1: Allocate room (reduce count)
             inventory.reduceAvailability(roomType);
-            System.out.println("Booking CONFIRMED for " + roomType);
+
+            // Step 2: Create reservation
+            Reservation reservation = new Reservation(roomType);
+
+            // Step 3: Confirmation
+            System.out.println("Booking CONFIRMED!");
+            System.out.println("Reservation ID: " + reservation.getReservationId());
+            System.out.println("Room Type: " + reservation.getRoomType());
+
+            return reservation;
+
         } else {
-            System.out.println("Booking FAILED for " + roomType + " (No rooms available)");
+            System.out.println("Booking FAILED! No rooms available.");
+            return null;
         }
     }
 }
@@ -77,20 +102,15 @@ public class BookMyStay {
 
         // Step 1: Setup Inventory
         RoomInventory inventory = new RoomInventory();
-        inventory.addRoomType("Single", 2);
-        inventory.addRoomType("Double", 1);
+        inventory.addRoomType("Single", 1);
+        inventory.addRoomType("Suite", 1);
 
-        // Step 2: Booking Service
-        BookingService bookingService = new BookingService();
+        // Step 2: Reservation Service
+        ReservationService service = new ReservationService();
 
-        // Step 3: Simulate requests (First-Come-First-Served)
-        bookingService.bookRoom(inventory, "Single"); // success
-        bookingService.bookRoom(inventory, "Single"); // success
-        bookingService.bookRoom(inventory, "Single"); // fail (no rooms left)
+        // Step 3: Booking Requests
+        service.confirmBooking(inventory, "Single"); // success
+        service.confirmBooking(inventory, "Single"); // fail
 
-        bookingService.bookRoom(inventory, "Double"); // success
-        bookingService.bookRoom(inventory, "Double"); // fail
-
-        // Step 4: Final inventory state
-        inventory.displayInventory();
+        service.confirmBooking(inventory, "Suite");  // success
     }
