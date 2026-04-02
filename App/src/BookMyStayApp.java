@@ -1,6 +1,6 @@
 import java.util.*;
 
-// Domain Model: Room
+// Room Model
 class Room {
     private String type;
     private double price;
@@ -19,28 +19,66 @@ class Room {
     }
 }
 
+// Add-On Service
+class AddOnService {
+    private String name;
+    private double cost;
+
+    public AddOnService(String name, double cost) {
+        this.name = name;
+        this.cost = cost;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getCost() {
+        return cost;
+    }
+}
+
 // Reservation Entity
 class Reservation {
     private static int counter = 1;
 
     private int reservationId;
-    private String roomType;
+    private Room room;
+    private List<AddOnService> services;
+    private double totalCost;
 
-    public Reservation(String roomType) {
-        this.reservationId = counter++; // unique ID
-        this.roomType = roomType;
+    public Reservation(Room room) {
+        this.reservationId = counter++;
+        this.room = room;
+        this.services = new ArrayList<>();
+        this.totalCost = room.getPrice();
     }
 
     public int getReservationId() {
         return reservationId;
     }
 
-    public String getRoomType() {
-        return roomType;
+    public Room getRoom() {
+        return room;
+    }
+
+    public double getTotalCost() {
+        return totalCost;
+    }
+
+    public void addService(AddOnService service) {
+        services.add(service);
+        totalCost += service.getCost();
+    }
+
+    public void display() {
+        System.out.println("Reservation ID: " + reservationId +
+                ", Room: " + room.getType() +
+                ", Total Cost: " + totalCost);
     }
 }
 
-// Inventory (Centralized State)
+// Inventory
 class RoomInventory {
     private HashMap<String, Integer> inventory;
 
@@ -64,53 +102,35 @@ class RoomInventory {
     }
 }
 
-// Allocation + Confirmation Service
-class ReservationService {
+// Booking History (NEW)
+class BookingHistory {
+    private List<Reservation> history;
 
-    public Reservation confirmBooking(RoomInventory inventory, String roomType) {
+    public BookingHistory() {
+        history = new ArrayList<>();
+    }
 
-        System.out.println("\nProcessing booking for: " + roomType);
+    public void addReservation(Reservation reservation) {
+        history.add(reservation);
+    }
 
-        int available = inventory.getAvailability(roomType);
-
-        if (available > 0) {
-
-            // Step 1: Allocate room (reduce count)
-            inventory.reduceAvailability(roomType);
-
-            // Step 2: Create reservation
-            Reservation reservation = new Reservation(roomType);
-
-            // Step 3: Confirmation
-            System.out.println("Booking CONFIRMED!");
-            System.out.println("Reservation ID: " + reservation.getReservationId());
-            System.out.println("Room Type: " + reservation.getRoomType());
-
-            return reservation;
-
-        } else {
-            System.out.println("Booking FAILED! No rooms available.");
-            return null;
+    public void showAllBookings() {
+        System.out.println("\n--- Booking History ---");
+        for (Reservation r : history) {
+            r.display();
         }
     }
-}
 
-// Main Class
-public class BookMyStay {
+    // Reporting: Total Revenue
+    public void generateReport() {
+        double totalRevenue = 0;
 
-    public static void main(String[] args) {
+        for (Reservation r : history) {
+            totalRevenue += r.getTotalCost();
+        }
 
-        // Step 1: Setup Inventory
-        RoomInventory inventory = new RoomInventory();
-        inventory.addRoomType("Single", 1);
-        inventory.addRoomType("Suite", 1);
-
-        // Step 2: Reservation Service
-        ReservationService service = new ReservationService();
-
-        // Step 3: Booking Requests
-        service.confirmBooking(inventory, "Single"); // success
-        service.confirmBooking(inventory, "Single"); // fail
-
-        service.confirmBooking(inventory, "Suite");  // success
+        System.out.println("\n--- Report ---");
+        System.out.println("Total Bookings: " + history.size());
+        System.out.println("Total Revenue: " + totalRevenue);
     }
+}
