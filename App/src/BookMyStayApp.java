@@ -1,13 +1,19 @@
 public class BookMyStayApp {
+
     public static void main(String[] args) {
 
-        // Welcome message
-        System.out.println("=====================================");
-        System.out.println("   Welcome to Book My Stay App");
-        System.out.println("   Hotel Booking System v1.0");
-        System.out.println("=====================================");
+        System.out.println("Welcome to Book My Stay App");
 
-        // Application end message
-        System.out.println("Application Started Successfully!");
+        int availableRooms = 5;
+        int requestedRooms = 2;
+
+        System.out.println("Available Rooms: " + availableRooms);
+        System.out.println("Requested Rooms: " + requestedRooms);
+
+        if (requestedRooms <= availableRooms) {
+            System.out.println("Rooms are available. Booking confirmed!");
+        } else {
+            System.out.println("Sorry! Rooms not available.");
+        }
     }
 }
