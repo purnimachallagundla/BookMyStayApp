@@ -6,6 +6,12 @@ class Room {
     private double price;
 
     public Room(String type, double price) {
+        if (type == null || type.isEmpty()) {
+            throw new IllegalArgumentException("Room type cannot be empty");
+        }
+        if (price <= 0) {
+            throw new IllegalArgumentException("Invalid room price");
+        }
         this.type = type;
         this.price = price;
     }
@@ -19,39 +25,19 @@ class Room {
     }
 }
 
-// Add-On Service
-class AddOnService {
-    private String name;
-    private double cost;
-
-    public AddOnService(String name, double cost) {
-        this.name = name;
-        this.cost = cost;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public double getCost() {
-        return cost;
-    }
-}
-
-// Reservation Entity
+// Reservation
 class Reservation {
     private static int counter = 1;
 
     private int reservationId;
     private Room room;
-    private List<AddOnService> services;
-    private double totalCost;
 
     public Reservation(Room room) {
+        if (room == null) {
+            throw new IllegalArgumentException("Room cannot be null");
+        }
         this.reservationId = counter++;
         this.room = room;
-        this.services = new ArrayList<>();
-        this.totalCost = room.getPrice();
     }
 
     public int getReservationId() {
@@ -61,30 +47,11 @@ class Reservation {
     public Room getRoom() {
         return room;
     }
-
-    public double getTotalCost() {
-        return totalCost;
-    }
-
-    public void addService(AddOnService service) {
-        services.add(service);
-        totalCost += service.getCost();
-    }
-
-    public void display() {
-        System.out.println("Reservation ID: " + reservationId +
-                ", Room: " + room.getType() +
-                ", Total Cost: " + totalCost);
-    }
 }
 
 // Inventory
 class RoomInventory {
-    private HashMap<String, Integer> inventory;
-
-    public RoomInventory() {
-        inventory = new HashMap<>();
-    }
+    private HashMap<String, Integer> inventory = new HashMap<>();
 
     public void addRoomType(String type, int count) {
         inventory.put(type, count);
@@ -96,42 +63,123 @@ class RoomInventory {
 
     public void reduceAvailability(String type) {
         int current = getAvailability(type);
-        if (current > 0) {
-            inventory.put(type, current - 1);
+        if (current <= 0) {
+            throw new IllegalStateException("No rooms available");
+        }
+        inventory.put(type, current - 1);
+    }
+
+    // Rollback method (IMPORTANT)
+    public void increaseAvailability(String type) {
+        int current = getAvailability(type);
+        inventory.put(type, current + 1);
+    }
+
+    public void displayInventory() {
+        System.out.println("\n--- Inventory ---");
+        for (Map.Entry<String, Integer> e : inventory.entrySet()) {
+            System.out.println(e.getKey() + " : " + e.getValue());
         }
     }
 }
 
-// Booking History (NEW)
+// Booking History
 class BookingHistory {
-    private List<Reservation> history;
+    private Map<Integer, Reservation> reservations = new HashMap<>();
 
-    public BookingHistory() {
-        history = new ArrayList<>();
+    public void addReservation(Reservation r) {
+        reservations.put(r.getReservationId(), r);
     }
 
-    public void addReservation(Reservation reservation) {
-        history.add(reservation);
+    public Reservation getReservation(int id) {
+        return reservations.get(id);
     }
 
-    public void showAllBookings() {
+    public void removeReservation(int id) {
+        reservations.remove(id);
+    }
+
+    public void showAll() {
         System.out.println("\n--- Booking History ---");
-        for (Reservation r : history) {
-            r.display();
+        for (Reservation r : reservations.values()) {
+            System.out.println("ID: " + r.getReservationId() +
+                    ", Room: " + r.getRoom().getType());
         }
-    }
-
-    // Reporting: Total Revenue
-    public void generateReport() {
-        double totalRevenue = 0;
-
-        for (Reservation r : history) {
-            totalRevenue += r.getTotalCost();
-        }
-
-        System.out.println("\n--- Report ---");
-        System.out.println("Total Bookings: " + history.size());
-        System.out.println("hello");
-        System.out.println("Total Reporting: " + totalRevenue);
     }
 }
+
+// Reservation Service
+class ReservationService {
+
+    private BookingHistory history;
+
+    public ReservationService(BookingHistory history) {
+        this.history = history;
+    }
+
+    // Booking
+    public Reservation bookRoom(RoomInventory inventory, Room room) {
+        int available = inventory.getAvailability(room.getType());
+
+        if (available > 0) {
+            inventory.reduceAvailability(room.getType());
+
+            Reservation r = new Reservation(room);
+            history.addReservation(r);
+
+            System.out.println("Booking CONFIRMED! ID: " + r.getReservationId());
+            return r;
+        } else {
+            System.out.println("Booking FAILED!");
+            return null;
+        }
+    }
+
+    // Cancellation + Rollback
+    public void cancelBooking(RoomInventory inventory, int reservationId) {
+
+        Reservation r = history.getReservation(reservationId);
+
+        if (r == null) {
+            System.out.println("Invalid Reservation ID!");
+            return;
+        }
+
+        // Rollback inventory
+        inventory.increaseAvailability(r.getRoom().getType());
+
+        // Remove reservation
+        history.removeReservation(reservationId);
+
+        System.out.println("Booking CANCELLED for ID: " + reservationId);
+    }
+}
+
+// Main Class
+public class BookMyStay {
+
+    public static void main(String[] args) {
+
+        // Setup
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 1);
+
+        Room room = new Room("Single", 1000);
+
+        BookingHistory history = new BookingHistory();
+        ReservationService service = new ReservationService(history);
+
+        // Booking
+        Reservation r1 = service.bookRoom(inventory, room);
+
+        inventory.displayInventory();
+
+        // Cancellation
+        if (r1 != null) {
+            service.cancelBooking(inventory, r1.getReservationId());
+        }
+
+        // Final state
+        inventory.displayInventory();
+        history.showAll();
+    }
